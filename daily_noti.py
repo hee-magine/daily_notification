@@ -151,8 +151,8 @@ try:
             else:
                 print("메시지를 전송하지 않았습니다.")
         
-        if user == "강희산":
-            break
+        # if user == "강희산":
+        #     break
 
 except Exception as e:
     print(f"오류 발생: {e}")
