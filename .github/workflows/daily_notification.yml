@@ -1,0 +1,33 @@
+name: Daily Python Script
+
+on:
+  schedule:
+    # 매일 KTC 기준 오후 11시에 실행 (원하는 시간대로 조정 가능)
+    - cron: '0 14 * * *'
+  workflow_dispatch: # 수동으로 실행할 수 있는 옵션
+
+jobs:
+  run-python-script:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11.7'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Run Python script
+      env:
+        SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+        NOTION_API_TOKEN: ${{ secrets.NOTION_API_TOKEN }}
+        AIRTABLE_API_KEY: ${{ secrets.AIRTABLE_API_KEY }}
+      run: |
+        python daily_noti.py
