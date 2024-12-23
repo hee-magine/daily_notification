@@ -3,7 +3,7 @@ name: Daily Python Script
 on:
   schedule:
     # 매일 KTC 기준 오후 11시에 실행 (원하는 시간대로 조정 가능)
-    - cron: '0 14 * * *'
+    - cron: '17 15 * * *'
   workflow_dispatch: # 수동으로 실행할 수 있는 옵션
 
 jobs:
