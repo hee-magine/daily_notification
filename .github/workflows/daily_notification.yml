@@ -26,8 +26,8 @@ jobs:
 
     - name: Run Python script
       env:
-        SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
-        NOTION_API_TOKEN: ${{ secrets.NOTION_API_TOKEN }}
+        SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
+        NOTION_API_KEY: ${{ secrets.NOTION_API_KEY }}
         AIRTABLE_API_KEY: ${{ secrets.AIRTABLE_API_KEY }}
       run: |
         python daily_noti.py
