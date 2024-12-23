@@ -21,10 +21,10 @@ user_info_dict = {
 user_info = pd.DataFrame(user_info_dict)
 
 # Step 1: Airtable 멤버 테이블에서 사용자 정보 가져와서 매일의 기록 알림 상태 업데이트
-def update_status_for_notification(user_info, user_name, table_name):
+def update_status_for_notification(user_info, user_name, table_name, airtable_api_key=AIRTABLE_API_KEY):
     url = f'https://api.airtable.com/v0/{BASE_ID}/{table_name}?filterByFormula={{이름}}="{user_name}"'
     headers = {
-        'Authorization': f'Bearer {AIRTABLE_API_KEY}',
+        'Authorization': f'Bearer {airtable_api_key}',
         'Content-Type': 'application/json'
     }
     
@@ -53,7 +53,7 @@ def update_status_for_notification(user_info, user_name, table_name):
         raise Exception(f'Error fetching user info from Airtable: {response.json().get("error")}')
 
 # Step 2: Airtable 데일리 기록 테이블에서 사용자 기록 가져와서 DB item id 추출
-def get_db_item_id(member_name, date_string, table_name):
+def get_db_item_id(member_name, date_string, table_name, airtable_api_key=AIRTABLE_API_KEY):
     # Construct the filter formula for multiple conditions
     filter_formula = f"AND({{팀원}}='{member_name}', {{Date String}}='{date_string}')"
     
@@ -62,7 +62,7 @@ def get_db_item_id(member_name, date_string, table_name):
     
     # Set up headers with API key
     headers = {
-        'Authorization': f'Bearer {AIRTABLE_API_KEY}',
+        'Authorization': f'Bearer {airtable_api_key}',
         'Content-Type': 'application/json'
     }
     
@@ -84,10 +84,10 @@ def get_db_item_id(member_name, date_string, table_name):
         return None
 
 # Step 3: Notion에서 해당 DB item id의 checkbox 상태 확인
-def check_notion_checkbox(db_item_id):
+def check_notion_checkbox(db_item_id, notion_api_key=NOTION_API_KEY):
     url = f"https://api.notion.com/v1/pages/{db_item_id}"
     headers = {
-        "Authorization": f"Bearer {NOTION_API_KEY}",
+        "Authorization": f"Bearer {notion_api_key}",
         "Notion-Version": "2022-06-28",  # 노션 API 버전
     }
 
@@ -105,9 +105,9 @@ def check_notion_checkbox(db_item_id):
         return None
 
 # Step 4: 슬랙 DM 채널 열기
-def open_dm_channel(user_id):
+def open_dm_channel(user_id, slack_token=SLACK_TOKEN):
     url = "https://slack.com/api/conversations.open"
-    headers = {"Authorization": f"Bearer {SLACK_TOKEN}", "Content-Type": "application/json"}
+    headers = {"Authorization": f"Bearer {slack_token}", "Content-Type": "application/json"}
     payload = {"users": user_id}
     response = requests.post(url, headers=headers, json=payload)
     data = response.json()
@@ -117,9 +117,9 @@ def open_dm_channel(user_id):
         raise Exception(f"Error opening DM channel: {data.get('error')}")
 
 # Step 5: 슬랙 메시지 보내기
-def send_message(channel_id, text):
+def send_message(channel_id, text, slack_token=SLACK_TOKEN):
     url = "https://slack.com/api/chat.postMessage"
-    headers = {"Authorization": f"Bearer {SLACK_TOKEN}", "Content-Type": "application/json"}
+    headers = {"Authorization": f"Bearer {slack_token}", "Content-Type": "application/json"}
     payload = {"channel": channel_id, "text": text}
     response = requests.post(url, headers=headers, json=payload)
     data = response.json()
@@ -130,22 +130,23 @@ def send_message(channel_id, text):
 try:
     for user in user_info["user_name"]:
         # user = "강희산"
-        update_status_for_notification(user_info, user, MEMBER_TABLE_NAME)
+        update_status_for_notification(user_info, user, MEMBER_TABLE_NAME, AIRTABLE_API_KEY)
 
         if user_info.loc[user_info["user_name"]==user, "daily_notification"].values[0]:
             # 오늘 추출
             today = datetime.today()
             date_string = today.strftime("%Y-%m-%d")
             print(date_string)
-            db_item_id = get_db_item_id(user, date_string, DAILY_TABLE_NAME)
+            db_item_id = get_db_item_id(user, date_string, DAILY_TABLE_NAME, AIRTABLE_API_KEY)
             cleaned_db_item_id = db_item_id.replace("-", "")
+            print(db_item_id)
             print(cleaned_db_item_id)
-            checked_status = check_notion_checkbox(db_item_id)
+            checked_status = check_notion_checkbox(db_item_id, NOTION_API_KEY)
             user_id = user_info.loc[user_info["user_name"]==user, "user_id"].values[0]
             if not(checked_status["활동 기록"] & checked_status["식사 기록"]):
-                channel_id = open_dm_channel(user_id)
+                channel_id = open_dm_channel(user_id, SLACK_TOKEN)
                 message = f"오늘의 기록을 아직 완료하지 않으셨네요! 하루를 마무리하며 오늘의 활동과 식사를 기록해볼까요? \nhttps://www.notion.so/{cleaned_db_item_id}"
-                send_message(channel_id, message)
+                send_message(channel_id, message, SLACK_TOKEN)
                 print("메시지가 성공적으로 전송되었습니다!")
             else:
                 print("메시지를 전송하지 않았습니다.")
